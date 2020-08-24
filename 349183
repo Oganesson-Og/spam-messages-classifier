@@ -1,0 +1,44 @@
+import pandas as pd
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
+from sklearn.metrics import confusion_matrix, accuracy_score
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+import re
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+pd.pandas.set_option('display.max_columns', None)
+
+messages = pd.read_csv('C:/Users/Admin/Documents/Smsspamcollection/SMSSpamCollection', sep='\t',
+                       names=['Label', 'Message'])
+
+word_net = WordNetLemmatizer()
+
+corpus = []
+for i in range(0, len(messages)):
+    review = re.sub('[^a-zA-Z]', ' ', messages['Message'][i])
+    review = review.lower()
+    review = review.split()
+    review = [word_net.lemmatize(word) for word in review if not word in set(stopwords.words('english'))]
+    review = ' '.join(review)
+    corpus.append(review)
+
+
+cv = CountVectorizer(max_features=4500)
+X = cv.fit_transform(corpus).toarray()
+y = pd.get_dummies(messages['Label'])
+
+y = y.iloc[:, 1].values
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+estimator = MultinomialNB()
+estimator.fit(X_train, y_train)
+y_pred = estimator.predict(X_test)
+result = confusion_matrix(y_test, y_pred)
+
+sns.heatmap(result, annot=True, cmap='plasma')
+plt.show()
+
+accuracy_1 = accuracy_score(y_test, y_pred)
+print(f'The spam classifier with lemmatization accuracy is {accuracy_1*100}')
